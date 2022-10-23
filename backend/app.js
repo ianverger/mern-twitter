@@ -7,6 +7,7 @@ const csurf = require('csurf');
 const { isProduction } = require('./config/keys');
 const debug = require('debug');
 require('./models/User');
+require('./models/Tweet');
 require('./config/passport'); 
 const passport = require('passport');
 
@@ -50,6 +51,29 @@ app.use(
 app.use('/api/users', usersRouter);
 app.use('/api/tweets', tweetsRouter);
 app.use('/api/csrf', csrfRouter);
+
+// Serve static React build files statically in production
+if (isProduction) {
+  const path = require('path');
+  // Serve the frontend's index.html file at the root route
+  app.get('/', (req, res) => {
+    res.cookie('CSRF-TOKEN', req.csrfToken());
+    res.sendFile(
+      path.resolve(__dirname, '../frontend', 'build', 'index.html')
+    );
+  });
+
+  // Serve the static assets in the frontend's build folder
+  app.use(express.static(path.resolve("../frontend/build")));
+
+  // Serve the frontend's index.html file at all other routes NOT starting with /api
+  app.get(/^(?!\/?api).*/, (req, res) => {
+    res.cookie('CSRF-TOKEN', req.csrfToken());
+    res.sendFile(
+      path.resolve(__dirname, '../frontend', 'build', 'index.html')
+    );
+  });
+}
 
 // Express custom middleware for catching all unmatched requests and formatting
 // a 404 error to be sent as the response.
